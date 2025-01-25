@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  harbor-log:
+    image: goharbor/harbor-log:v2.9.0
+    container_name: harbor-log
+    restart: always
+    volumes:
+      - ./data/log:/var/log/docker
+    networks:
+      - harbor-net
+
+  registry:
+    image: goharbor/registry-photon:v2.9.0
+    container_name: registry
+    restart: always
+    volumes:
+      - ./data/registry:/storage
+    networks:
+      - harbor-net
+    environment:
+      - REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/storage
+
+  core:
+    image: goharbor/harbor-core:v2.9.0
+    container_name: core
+    restart: always
+    depends_on:
+      - registry
+      - harbor-log
+    volumes:
+      - /data/core:/data
+    networks:
+      - harbor-net
+    environment:
+      - CORE_SECRET=harbor-core-secret
+      - REGISTRY_URL=http://registry:5000
+
+  portal:
+    image: goharbor/harbor-portal:v2.9.0
+    container_name: portal
+    restart: always
+    depends_on:
+      - core
+    networks:
+      - harbor-net
+
+  database:
+    image: goharbor/harbor-db:v2.9.0
+    container_name: harbor-db
+    restart: always
+    volumes:
+      - ./data/database:/var/lib/postgresql/data
+    networks:
+      - harbor-net
+
+  redis:
+    image: goharbor/redis-photon:v2.9.0
+    container_name: harbor-redis
+    restart: always
+    networks:
+      - harbor-net
+
+networks:
+  harbor-net:
+    driver: bridge
